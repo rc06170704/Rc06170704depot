@@ -59,7 +59,7 @@
             },
             "parameters": {
               "virtualNetworkName": {
-                "value": "[field('Microsoft.Network/virtualNetworks/subnets/virtualNetworkName')]"
+                "value": "[split(field('id'), '/')[8]]" // Extract virtual network name from the subnet's resource ID
               },
               "subnetName": {
                 "value": "[field('name')]"
