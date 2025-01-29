@@ -1,0 +1,85 @@
+{
+  "mode": "All",
+  "policyRule": {
+    "if": {
+      "allOf": [
+        {
+          "field": "type",
+          "equals": "Microsoft.Network/virtualNetworks/subnets"
+        },
+        {
+          "field": "Microsoft.Network/virtualNetworks/subnets/routeTable.id",
+          "exists": "false"
+        }
+      ]
+    },
+    "then": {
+      "effect": "deployIfNotExists",
+      "details": {
+        "type": "Microsoft.Network/virtualNetworks/subnets",
+        "roleDefinitionIds": [
+          "/providers/Microsoft.Authorization/roleDefinitions/4d97b98b-1d4f-4787-a291-c67834d212e7" // Network Contributor role
+        ],
+        "deployment": {
+          "properties": {
+            "mode": "incremental",
+            "template": {
+              "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+              "contentVersion": "1.0.0.0",
+              "resources": [
+                {
+                  "type": "Microsoft.Network/routeTables",
+                  "apiVersion": "2023-04-01",
+                  "name": "[concat('RouteTable-', parameters('subnetName'))]",
+                  "location": "[field('location')]",
+                  "properties": {
+                    "routes": [
+                      {
+                        "name": "DefaultRoute",
+                        "properties": {
+                          "addressPrefix": "0.0.0.0/0",
+                          "nextHopType": "VirtualAppliance",
+                          "nextHopIpAddress": "[parameters('nextHopIpAddress')]"
+                        }
+                      }
+                    ]
+                  }
+                },
+                {
+                  "type": "Microsoft.Network/virtualNetworks/subnets",
+                  "apiVersion": "2023-04-01",
+                  "name": "[concat(parameters('virtualNetworkName'), '/', parameters('subnetName'))]",
+                  "properties": {
+                    "routeTable": {
+                      "id": "[resourceId('Microsoft.Network/routeTables', concat('RouteTable-', parameters('subnetName')))]"
+                    }
+                  }
+                }
+              ]
+            },
+            "parameters": {
+              "virtualNetworkName": {
+                "value": "[field('Microsoft.Network/virtualNetworks/subnets/virtualNetworkName')]"
+              },
+              "subnetName": {
+                "value": "[field('name')]"
+              },
+              "nextHopIpAddress": {
+                "value": "[parameters('nextHopIpAddress')]"
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "parameters": {
+    "nextHopIpAddress": {
+      "type": "String",
+      "metadata": {
+        "displayName": "Next Hop IP Address",
+        "description": "The IP address of the next hop for the default route (e.g., a virtual appliance)."
+      }
+    }
+  }
+}
